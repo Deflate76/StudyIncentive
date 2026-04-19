@@ -1,1 +1,180 @@
 
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Study Goal Tracker</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --gray: #ecf0f1;
+        }
+        body { font-family: 'sans-serif'; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .full-width { grid-column: span 2; }
+        input, textarea, button { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        button { cursor: pointer; background: var(--primary); color: white; border: none; font-weight: bold; }
+        button:hover { opacity: 0.9; }
+        .btn-delete { background: var(--danger); }
+        .btn-approve { background: var(--success); }
+
+        .goal-item { border: 1px solid #eee; padding: 15px; margin-bottom: 15px; border-radius: 8px; position: relative; }
+        .goal-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        
+        /* 프로그레스 바 스타일 */
+        .progress-container { background: #eee; height: 20px; border-radius: 10px; margin: 15px 0; overflow: hidden; position: relative; }
+        .progress-bar { height: 100%; background: var(--primary); transition: width 0.3s; }
+        .overdue { background: var(--danger) !important; }
+        .status-text { font-size: 0.85rem; color: #666; }
+
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-top: 5px; }
+        .tag-reward { background: #f1c40f; color: #000; }
+        .completed { opacity: 0.6; background: #f9f9f9; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🎯 Study 목표 & 보상 관리</h2>
+    
+    <div class="input-group">
+        <input type="text" id="goalTitle" placeholder="학습 목표 (예: 수학 문제집 10p)" class="full-width">
+        <textarea id="goalDesc" placeholder="상세 내용" class="full-width"></textarea>
+        <input type="text" id="rewardText" placeholder="보상 내용 (예: 게임 30분)" class="full-width">
+        <div>
+            <label>시작 시간</label>
+            <input type="datetime-local" id="startTime">
+        </div>
+        <div>
+            <label>마감 시간</label>
+            <input type="datetime-local" id="deadline">
+        </div>
+        <button onclick="addGoal()" class="full-width">목표 등록하기</button>
+    </div>
+
+    <div id="goalList"></div>
+</div>
+
+<script>
+    let goals = [];
+    const PARENT_PASSWORD = "1234"; // 부모 확인용 암호 (예시)
+
+    function addGoal() {
+        const goal = {
+            id: Date.now(),
+            title: document.getElementById('goalTitle').value,
+            desc: document.getElementById('goalDesc').value,
+            reward: document.getElementById('rewardText').value,
+            start: new Date(document.getElementById('startTime').value).getTime(),
+            end: new Date(document.getElementById('deadline').value).getTime(),
+            isApproved: false,
+            childDone: false,
+            rewardDone: false
+        };
+
+        if(!goal.title || !goal.start || !goal.end) return alert("내용을 모두 입력해주세요.");
+        
+        goals.push(goal);
+        render();
+    }
+
+    function deleteGoal(id) {
+        goals = goals.filter(g => g.id !== id);
+        render();
+    }
+
+    function parentAction(id, actionType) {
+        const pw = prompt("부모 암호를 입력하세요:");
+        if(pw !== PARENT_PASSWORD) return alert("암호가 틀렸습니다.");
+
+        const goal = goals.find(g => g.id === id);
+        if(actionType === 'approve') goal.isApproved = true;
+        if(actionType === 'reward') goal.rewardDone = true;
+        render();
+    }
+
+    function toggleChildDone(id) {
+        const goal = goals.find(g => g.id === id);
+        goal.childDone = !goal.childDone;
+        render();
+    }
+
+    function updateProgress() {
+        const now = new Date().getTime();
+        goals.forEach(goal => {
+            const el = document.getElementById(`bar-${goal.id}`);
+            const textEl = document.getElementById(`text-${goal.id}`);
+            if(!el) return;
+
+            const total = goal.end - goal.start;
+            const current = now - goal.start;
+            let percent = (current / total) * 100;
+
+            if (now < goal.start) {
+                percent = 0;
+                textEl.innerText = "대기 중 (시작 전)";
+            } else if (now > goal.end) {
+                percent = 100;
+                el.classList.add('overdue');
+                textEl.innerText = "시간 초과!";
+            } else {
+                percent = Math.min(Math.max(percent, 0), 100);
+                const remainingMin = Math.round((goal.end - now) / 60000);
+                textEl.innerText = `진행 중 (남은 시간: ${remainingMin}분)`;
+            }
+            el.style.width = percent + "%";
+        });
+    }
+
+    function render() {
+        const listEl = document.getElementById('goalList');
+        listEl.innerHTML = '';
+
+        goals.forEach(goal => {
+            const isCompleted = goal.childDone && goal.rewardDone;
+            const html = `
+                <div class="goal-item ${isCompleted ? 'completed' : ''}">
+                    <div class="goal-header">
+                        <div>
+                            <strong>${goal.title}</strong>
+                            <p style="margin:5px 0; font-size:0.9rem;">${goal.desc}</p>
+                            <span class="tag tag-reward">🎁 보상: ${goal.reward}</span>
+                        </div>
+                        <button class="btn-delete" onclick="deleteGoal(${goal.id})">삭제</button>
+                    </div>
+
+                    <div class="progress-container">
+                        <div id="bar-${goal.id}" class="progress-bar"></div>
+                    </div>
+                    <div class="status-text" id="text-${goal.id}">계산 중...</div>
+
+                    <div style="margin-top:15px; display:flex; gap:10px;">
+                        ${!goal.isApproved ? 
+                            `<button class="btn-approve" onclick="parentAction(${goal.id}, 'approve')">부모 승인(Approve)</button>` : 
+                            `<span>✅ 승인됨</span>`}
+                        
+                        <label><input type="checkbox" ${goal.childDone ? 'checked' : ''} onchange="toggleChildDone(${goal.id})"> 아이 완료</label>
+                        
+                        ${goal.childDone ? 
+                            `<button onclick="parentAction(${goal.id}, 'reward')" ${goal.rewardDone ? 'disabled' : ''}>
+                                ${goal.rewardDone ? '보상 지급완료' : '보상 완료 체크(부모)'}
+                            </button>` : ''}
+                    </div>
+                </div>
+            `;
+            listEl.innerHTML += html;
+        });
+        updateProgress();
+    }
+
+    // 1분마다 그래프 업데이트
+    setInterval(updateProgress, 60000);
+</script>
+
+</body>
+</html>
