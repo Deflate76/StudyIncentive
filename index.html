@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Study Goal Tracker (보안 적용)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Study Goal Tracker</title>
     <style>
         :root {
             --primary: #4a90e2;
@@ -10,76 +11,97 @@
             --danger: #e74c3c;
             --dark: #2c3e50;
             --gray: #ecf0f1;
+            --reward: #f1c40f;
         }
-        body { font-family: 'sans-serif'; background: #f4f7f6; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Pretendard', -apple-system, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: var(--dark); line-height: 1.5; }
         
-        /* 화면 전환용 클래스 */
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
         .hidden { display: none !important; }
 
-        .header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--gray); padding-bottom: 10px; margin-bottom: 20px; }
-        
-        .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        /* 헤더 */
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 10px; }
+        h2 { font-size: 1.25rem; margin: 0; word-break: keep-all; }
+
+        /* 입력 폼 */
+        .input-group { background: #f9f9fb; padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #eee; }
+        .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .full-width { grid-column: span 2; }
-        input, textarea, button { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
         
-        button { cursor: pointer; background: var(--primary); color: white; border: none; font-weight: bold; transition: 0.2s; }
-        button:hover { opacity: 0.8; }
-        .btn-delete { background: var(--danger); padding: 5px 10px; font-size: 0.9rem; }
+        input, textarea, button { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; outline: none; }
+        input:focus { border-color: var(--primary); }
+        label { font-size: 0.8rem; color: #666; font-weight: bold; margin-bottom: 5px; display: block; }
+
+        button { cursor: pointer; background: var(--primary); color: white; border: none; font-weight: bold; transition: active 0.1s; }
+        button:active { transform: scale(0.98); opacity: 0.9; }
+        
+        .btn-delete { background: #fdeaea; color: var(--danger); width: auto; padding: 6px 12px; font-size: 0.8rem; }
         .btn-approve { background: var(--success); }
-        .btn-setting { background: var(--dark); padding: 8px 15px; border-radius: 20px; }
+        .btn-setting { background: var(--dark); width: auto; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; }
+        .btn-reward { background: #8e44ad; }
 
-        .goal-item { border: 1px solid #eee; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
-        .goal-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        /* 목표 리스트 카드 */
+        .goal-item { position: relative; border: 1px solid #eee; padding: 18px; margin-bottom: 15px; border-radius: 12px; background: #fff; transition: 0.3s; }
+        .goal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         
-        .progress-container { background: #eee; height: 20px; border-radius: 10px; margin: 15px 0; overflow: hidden; }
-        .progress-bar { height: 100%; background: var(--primary); transition: width 0.3s; }
+        /* 그래프 시간 표시 최적화 */
+        .progress-wrapper { margin: 25px 0 15px 0; position: relative; }
+        .progress-container { background: #eee; height: 14px; border-radius: 7px; overflow: hidden; position: relative; }
+        .progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width 0.5s ease-out; }
         .overdue { background: var(--danger) !important; }
-        .status-text { font-size: 0.85rem; color: #666; font-weight: bold; }
 
-        .tag { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; margin-top: 5px; }
-        .tag-reward { background: #f1c40f; color: #000; font-weight: bold; }
-        .completed { opacity: 0.6; background: #f9f9f9; border-color: var(--success); }
+        .time-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.75rem; color: #888; font-family: monospace; }
+        .status-text { text-align: center; font-size: 0.8rem; color: #444; font-weight: bold; margin-bottom: 10px; }
 
-        /* 설정 화면 전용 스타일 */
-        .setup-box { max-width: 400px; margin: 50px auto; text-align: center; }
-        .setup-box input { width: 100%; box-sizing: border-box; margin-bottom: 15px; text-align: center; }
+        /* 태그 및 상태 */
+        .tag-reward { background: var(--reward); color: #000; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block; margin-top: 8px; }
+        .footer-actions { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; display: flex; flex-direction: column; gap: 10px; }
+        .action-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        
+        .completed { border-color: var(--success); background: #fafffa; opacity: 0.9; }
+
+        /* 설정 화면 */
+        .setup-box { text-align: center; max-width: 350px; margin-top: 20vh; }
+        
+        /* 체크박스 커스텀 */
+        .custom-check { display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer; }
+        input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
     </style>
-    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="shortcut icon" href="/favicon.ico" />
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-<link rel="manifest" href="/site.webmanifest" />
 </head>
 <body>
 
 <div id="setupScreen" class="container setup-box">
-    <h2>🔒 비밀번호 설정</h2>
-    <p style="color: #666; font-size: 0.9rem;">안전한 사용을 위해 비밀번호를 설정해주세요.</p>
-    <input type="password" id="parentPwInput" placeholder="부모님 비밀번호 (승인/보상용)">
-    <input type="password" id="childPwInput" placeholder="아이 비밀번호 (삭제용)">
-    <button onclick="savePasswords()" style="width: 100%;">저장 및 시작하기</button>
+    <h2>🔒 보안 설정</h2>
+    <p style="color: #666; font-size: 0.85rem;">부모님과 아이의 비밀번호를 설정하세요.</p>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+        <input type="password" id="parentPwInput" placeholder="부모님 비밀번호 (승인/보상)">
+        <input type="password" id="childPwInput" placeholder="아이 비밀번호 (삭제)">
+        <button onclick="savePasswords()" style="margin-top: 10px;">저장 후 시작하기</button>
+    </div>
 </div>
 
 <div id="mainScreen" class="container hidden">
     <div class="header-row">
-        <h2 style="margin: 0;">🎯 Study 목표 & 보상 관리</h2>
-        <button class="btn-setting" onclick="showSetupScreen()">⚙️ 비번 재설정</button>
+        <h2>🎯 Study Tracker</h2>
+        <button class="btn-setting" onclick="showSetupScreen()">⚙️ 설정</button>
     </div>
     
     <div class="input-group">
-        <input type="text" id="goalTitle" placeholder="학습 목표 (예: 수학 1단원 풀기)" class="full-width">
-        <textarea id="goalDesc" placeholder="상세 내용" class="full-width"></textarea>
-        <input type="text" id="rewardText" placeholder="보상 내용 (예: 유튜브 30분)" class="full-width">
-        <div>
-            <label>시작 시간</label><br>
-            <input type="datetime-local" id="startTime" style="width: 90%;">
+        <div class="grid-layout">
+            <input type="text" id="goalTitle" placeholder="어떤 공부를 할까요?" class="full-width">
+            <textarea id="goalDesc" placeholder="상세 내용 (선택)" class="full-width" rows="2"></textarea>
+            <input type="text" id="rewardText" placeholder="완료 보상 (예: 게임 30분)" class="full-width">
+            <div>
+                <label>시작 시간</label>
+                <input type="datetime-local" id="startTime">
+            </div>
+            <div>
+                <label>마감 시간</label>
+                <input type="datetime-local" id="deadline">
+            </div>
+            <button onclick="addGoal()" class="full-width" style="margin-top: 5px;">목표 등록</button>
         </div>
-        <div>
-            <label>마감 시간</label><br>
-            <input type="datetime-local" id="deadline" style="width: 90%;">
-        </div>
-        <button onclick="addGoal()" class="full-width">목표 등록하기</button>
     </div>
 
     <div id="goalList"></div>
@@ -90,7 +112,6 @@
     let parentPassword = null;
     let childPassword = null;
 
-    // --- 1. 보안 및 화면 전환 로직 ---
     function init() {
         if (!parentPassword || !childPassword) {
             document.getElementById('setupScreen').classList.remove('hidden');
@@ -105,15 +126,10 @@
     function savePasswords() {
         const pPw = document.getElementById('parentPwInput').value;
         const cPw = document.getElementById('childPwInput').value;
-
-        if (!pPw || !cPw) return alert("부모님과 아이 비밀번호를 모두 입력해주세요!");
-        
+        if (!pPw || !cPw) return alert("모든 비밀번호를 입력해주세요!");
         parentPassword = pPw;
         childPassword = cPw;
-        
-        alert("비밀번호가 성공적으로 설정되었습니다.");
-        document.getElementById('parentPwInput').value = '';
-        document.getElementById('childPwInput').value = '';
+        alert("설정되었습니다.");
         init();
     }
 
@@ -122,14 +138,16 @@
         document.getElementById('mainScreen').classList.add('hidden');
     }
 
-    // --- 2. 목표 관리 로직 ---
     function addGoal() {
         const title = document.getElementById('goalTitle').value;
-        const start = new Date(document.getElementById('startTime').value).getTime();
-        const end = new Date(document.getElementById('deadline').value).getTime();
+        const startVal = document.getElementById('startTime').value;
+        const endVal = document.getElementById('deadline').value;
 
-        if (!title || !start || !end) return alert("목표명, 시작 시간, 마감 시간을 모두 입력해주세요.");
+        if (!title || !startVal || !endVal) return alert("필수 정보를 모두 입력해주세요.");
         
+        const start = new Date(startVal).getTime();
+        const end = new Date(endVal).getTime();
+
         goals.push({
             id: Date.now(),
             title: title,
@@ -137,54 +155,47 @@
             reward: document.getElementById('rewardText').value,
             start: start,
             end: end,
+            startStr: formatTime(new Date(startVal)),
+            endStr: formatTime(new Date(endVal)),
             isApproved: false,
             childDone: false,
             rewardDone: false
         });
 
-        // 입력창 초기화
         document.getElementById('goalTitle').value = '';
         document.getElementById('goalDesc').value = '';
         document.getElementById('rewardText').value = '';
         render();
     }
 
-    // 아이 권한 (삭제)
+    function formatTime(date) {
+        return `${(date.getMonth()+1)}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+    }
+
     function deleteGoal(id) {
-        const pw = prompt("🗑️ 삭제하려면 아이 비밀번호를 입력하세요:");
-        if (pw === null) return; // 취소 누름
-        if (pw !== childPassword) return alert("❌ 아이 비밀번호가 틀렸습니다.");
-
-        goals = goals.filter(g => g.id !== id);
-        render();
+        const pw = prompt("🗑️ 아이 비밀번호를 입력하세요:");
+        if (pw === childPassword) {
+            goals = goals.filter(g => g.id !== id);
+            render();
+        } else if (pw !== null) alert("❌ 비번이 틀렸습니다.");
     }
 
-    // 부모 권한 (승인 & 보상)
     function parentAction(id, actionType) {
-        const pw = prompt("🛡️ 권한 확인: 부모 비밀번호를 입력하세요:");
-        if (pw === null) return; 
-        if (pw !== parentPassword) return alert("❌ 부모 비밀번호가 틀렸습니다.");
-
-        const goal = goals.find(g => g.id === id);
-        if (actionType === 'approve') {
-            goal.isApproved = true;
-            alert("✅ 목표가 승인되었습니다!");
-        }
-        if (actionType === 'reward') {
-            goal.rewardDone = true;
-            alert("🎁 보상 지급이 완료되었습니다!");
-        }
-        render();
+        const pw = prompt("🛡️ 부모 비밀번호를 입력하세요:");
+        if (pw === parentPassword) {
+            const goal = goals.find(g => g.id === id);
+            if (actionType === 'approve') goal.isApproved = true;
+            if (actionType === 'reward') goal.rewardDone = true;
+            render();
+        } else if (pw !== null) alert("❌ 비번이 틀렸습니다.");
     }
 
-    // 체크박스 (아이 완료) - 비번 없이 자유롭게 체크 가능
     function toggleChildDone(id) {
         const goal = goals.find(g => g.id === id);
         goal.childDone = !goal.childDone;
         render();
     }
 
-    // --- 3. 시각화 및 렌더링 로직 ---
     function updateProgress() {
         const now = new Date().getTime();
         goals.forEach(goal => {
@@ -198,16 +209,15 @@
 
             if (now < goal.start) {
                 percent = 0;
-                textEl.innerText = "⏳ 대기 중 (시작 전)";
-                el.classList.remove('overdue');
+                textEl.innerText = "⏳ 시작 전";
             } else if (now > goal.end) {
                 percent = 100;
                 el.classList.add('overdue');
                 textEl.innerText = "🚨 시간 초과!";
             } else {
                 percent = Math.min(Math.max(percent, 0), 100);
-                const remainingMin = Math.round((goal.end - now) / 60000);
-                textEl.innerText = `🔥 진행 중 (남은 시간: ${remainingMin}분)`;
+                const remain = Math.round((goal.end - now) / 60000);
+                textEl.innerText = `🔥 진행 중 (약 ${remain}분 남음)`;
                 el.classList.remove('overdue');
             }
             el.style.width = percent + "%";
@@ -223,36 +233,43 @@
             const html = `
                 <div class="goal-item ${isCompleted ? 'completed' : ''}">
                     <div class="goal-header">
-                        <div>
-                            <strong style="font-size: 1.1rem;">${goal.title}</strong>
-                            <p style="margin:5px 0; font-size:0.9rem; color:#555;">${goal.desc}</p>
-                            ${goal.reward ? `<span class="tag tag-reward">🎁 보상: ${goal.reward}</span>` : ''}
+                        <div style="flex:1">
+                            <strong style="font-size: 1rem;">${goal.title}</strong>
+                            <p style="margin:4px 0; font-size:0.85rem; color:#666;">${goal.desc}</p>
+                            ${goal.reward ? `<span class="tag-reward">🎁 ${goal.reward}</span>` : ''}
                         </div>
                         <button class="btn-delete" onclick="deleteGoal(${goal.id})">삭제</button>
                     </div>
 
-                    <div class="progress-container">
-                        <div id="bar-${goal.id}" class="progress-bar"></div>
+                    <div class="progress-wrapper">
+                        <div class="status-text" id="text-${goal.id}">계산 중...</div>
+                        <div class="progress-container">
+                            <div id="bar-${goal.id}" class="progress-bar"></div>
+                        </div>
+                        <div class="time-labels">
+                            <span>시작: ${goal.startStr}</span>
+                            <span>종료: ${goal.endStr}</span>
+                        </div>
                     </div>
-                    <div class="status-text" id="text-${goal.id}">계산 중...</div>
 
-                    <div style="margin-top:15px; display:flex; flex-wrap: wrap; gap:10px; align-items: center; border-top: 1px dashed #ccc; padding-top: 10px;">
-                        
-                        ${!goal.isApproved ? 
-                            `<button class="btn-approve" onclick="parentAction(${goal.id}, 'approve')">🛡️ 부모 승인하기</button>` : 
-                            `<span style="color: var(--success); font-weight: bold;">✅ 부모 승인됨</span>`}
-                        
-                        <label style="margin-left: auto; cursor:pointer;">
-                            <input type="checkbox" ${goal.childDone ? 'checked' : ''} 
-                                   ${!goal.isApproved ? 'disabled' : ''} 
-                                   onchange="toggleChildDone(${goal.id})"> 
-                            🧑 아이 완료
-                        </label>
+                    <div class="footer-actions">
+                        <div class="action-row">
+                            ${!goal.isApproved ? 
+                                `<button class="btn-approve" onclick="parentAction(${goal.id}, 'approve')">🛡️ 부모 승인</button>` : 
+                                `<span style="color: var(--success); font-weight: bold; font-size: 0.9rem;">✅ 승인 완료</span>`}
+                            
+                            <label class="custom-check">
+                                <input type="checkbox" ${goal.childDone ? 'checked' : ''} 
+                                       ${!goal.isApproved ? 'disabled' : ''} 
+                                       onchange="toggleChildDone(${goal.id})"> 
+                                🧑 완료
+                            </label>
+                        </div>
                         
                         ${goal.childDone ? 
-                            `<button onclick="parentAction(${goal.id}, 'reward')" 
-                                     ${goal.rewardDone ? 'disabled style="background: gray;"' : 'style="background: #8e44ad;"'}>
-                                ${goal.rewardDone ? '🎉 보상 지급완료' : '🛡️ 보상 완료 확인 (부모)'}
+                            `<button onclick="parentAction(${goal.id}, 'reward')" class="btn-reward"
+                                     ${goal.rewardDone ? 'disabled style="background: #ccc;"' : ''}>
+                                ${goal.rewardDone ? '🎉 보상 지급완료' : '🛡️ 보상 지급 확인 (부모)'}
                             </button>` : ''}
                     </div>
                 </div>
@@ -262,9 +279,8 @@
         updateProgress();
     }
 
-    // 초기 실행 및 1분마다 그래프 업데이트
     init();
-    setInterval(updateProgress, 60000);
+    setInterval(updateProgress, 30000); // 30초마다 갱신
 </script>
 
 </body>
