@@ -283,5 +283,29 @@
     setInterval(updateProgress, 30000); // 30초마다 갱신
 </script>
 
+    <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDCZVfZUl0VTCfbHIEEriAnDhSZAXYXygA",
+    authDomain: "studyincentive.firebaseapp.com",
+    projectId: "studyincentive",
+    storageBucket: "studyincentive.firebasestorage.app",
+    messagingSenderId: "835106117130",
+    appId: "1:835106117130:web:d992c3c2266f0ffa1a31f3",
+    measurementId: "G-CYR1LSTGVS"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+
 </body>
 </html>
