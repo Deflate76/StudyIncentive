@@ -23,6 +23,7 @@
         /* 헤더 */
         .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 10px; }
         h2 { font-size: 1.25rem; margin: 0; word-break: keep-all; }
+        .user-info { font-size: 0.8rem; color: #666; text-align: right; }
 
         /* 입력 폼 */
         .input-group { background: #f9f9fb; padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #eee; }
@@ -40,12 +41,13 @@
         .btn-approve { background: var(--success); }
         .btn-setting { background: var(--dark); width: auto; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; }
         .btn-reward { background: #8e44ad; }
+        .btn-google { background: white; color: #444; border: 1px solid #ccc; font-size: 1rem; padding: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;}
 
         /* 목표 리스트 카드 */
         .goal-item { position: relative; border: 1px solid #eee; padding: 18px; margin-bottom: 15px; border-radius: 12px; background: #fff; transition: 0.3s; }
         .goal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .author-badge { font-size: 0.75rem; background: #eee; padding: 2px 6px; border-radius: 4px; color: #555; }
         
-        /* 그래프 시간 표시 최적화 */
         .progress-wrapper { margin: 25px 0 15px 0; position: relative; }
         .progress-container { background: #eee; height: 14px; border-radius: 7px; overflow: hidden; position: relative; }
         .progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width 0.5s ease-out; }
@@ -54,44 +56,65 @@
         .time-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.75rem; color: #888; font-family: monospace; }
         .status-text { text-align: center; font-size: 0.8rem; color: #444; font-weight: bold; margin-bottom: 10px; }
 
-        /* 태그 및 상태 */
         .tag-reward { background: var(--reward); color: #000; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block; margin-top: 8px; }
         .footer-actions { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; display: flex; flex-direction: column; gap: 10px; }
         .action-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         
         .completed { border-color: var(--success); background: #fafffa; opacity: 0.9; }
 
-        /* 설정 화면 */
-        .setup-box { text-align: center; max-width: 350px; margin-top: 20vh; }
+        /* 모달 및 셋업 박스 */
+        .setup-box { text-align: center; max-width: 400px; margin-top: 10vh; }
+        .role-btn-wrap { display: flex; gap: 10px; margin-top: 20px; }
+        .role-btn { padding: 20px; font-size: 1.1rem; flex: 1; }
         
-        /* 체크박스 커스텀 */
         .custom-check { display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer; }
         input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
     </style>
 </head>
 <body>
 
-<div id="setupScreen" class="container setup-box">
-    <h2>🔒 보안 설정</h2>
-    <p style="color: #666; font-size: 0.85rem;">부모님과 아이의 비밀번호를 설정하세요.</p>
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-        <input type="password" id="parentPwInput" placeholder="부모님 비밀번호 (승인/보상)">
-        <input type="password" id="childPwInput" placeholder="아이 비밀번호 (삭제)">
-        <button onclick="savePasswords()" style="margin-top: 10px;">저장 후 시작하기</button>
+<div id="loginScreen" class="container setup-box hidden">
+    <h2>🎯 Study Tracker</h2>
+    <p style="color: #666; font-size: 0.85rem; margin-bottom: 30px;">가족 스터디 인센티브 관리를 시작합니다.</p>
+    <button class="btn-google" onclick="signInWithGoogle()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google">
+        Google 계정으로 시작하기
+    </button>
+</div>
+
+<div id="roleScreen" class="container setup-box hidden">
+    <h2>👤 회원 자격 선택</h2>
+    <p style="color: #666; font-size: 0.85rem;">어떤 회원으로 가입하시겠습니까?</p>
+    <div class="role-btn-wrap">
+        <button class="role-btn" onclick="saveRole('parent')">👨‍👩‍👧 부모님</button>
+        <button class="role-btn" onclick="saveRole('child')">🧒 아이</button>
+    </div>
+</div>
+
+<div id="parentLinkScreen" class="container setup-box hidden">
+    <h2>🔗 자녀 연결하기</h2>
+    <p style="color: #666; font-size: 0.85rem;">관리할 자녀의 Google 로그인 이메일을 입력해주세요.<br>(여러 명일 경우 쉼표로 구분)</p>
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+        <input type="text" id="childEmailInput" placeholder="예: child1@gmail.com, child2@gmail.com">
+        <button onclick="linkChildren()">연결 완료</button>
     </div>
 </div>
 
 <div id="mainScreen" class="container hidden">
     <div class="header-row">
         <h2>🎯 Study Tracker</h2>
-        <button class="btn-setting" onclick="showSetupScreen()">⚙️ 설정</button>
+        <div class="user-info">
+            <span id="userRoleBadge"></span><br>
+            <span id="userEmailLabel" style="font-weight:bold;"></span><br>
+            <button class="btn-setting" onclick="signOutApp()" style="margin-top: 5px;">로그아웃</button>
+        </div>
     </div>
     
-    <div class="input-group">
+    <div id="addGoalSection" class="input-group hidden">
         <div class="grid-layout">
             <input type="text" id="goalTitle" placeholder="어떤 공부를 할까요?" class="full-width">
             <textarea id="goalDesc" placeholder="상세 내용 (선택)" class="full-width" rows="2"></textarea>
-            <input type="text" id="rewardText" placeholder="완료 보상 (예: 게임 30분)" class="full-width">
+            <input type="text" id="rewardText" placeholder="희망 보상 (예: 게임 30분)" class="full-width">
             <div>
                 <label>시작 시간</label>
                 <input type="datetime-local" id="startTime">
@@ -107,38 +130,126 @@
     <div id="goalList"></div>
 </div>
 
-<script>
-    let goals = [];
-    let parentPassword = null;
-    let childPassword = null;
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, addDoc, onSnapshot, query, where, orderBy, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-    function init() {
-        if (!parentPassword || !childPassword) {
-            document.getElementById('setupScreen').classList.remove('hidden');
-            document.getElementById('mainScreen').classList.add('hidden');
+    const firebaseConfig = {
+        apiKey: "AIzaSyDCZVfZUl0VTCfbHIEEriAnDhSZAXYXygA",
+        authDomain: "studyincentive.firebaseapp.com",
+        projectId: "studyincentive",
+        storageBucket: "studyincentive.firebasestorage.app",
+        messagingSenderId: "835106117130",
+        appId: "1:835106117130:web:d992c3c2266f0ffa1a31f3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserDoc = null; 
+    let unsubscribeGoals = null; // 실시간 리스너 해제용
+
+    // 화면 전환 유틸
+    function showScreen(screenId) {
+        ['loginScreen', 'roleScreen', 'parentLinkScreen', 'mainScreen'].forEach(id => {
+            document.getElementById(id).classList.add('hidden');
+        });
+        document.getElementById(screenId).classList.remove('hidden');
+    }
+
+    // Auth State Listener
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            // 사용자 정보 DB 확인
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                currentUserDoc = { uid: user.uid, email: user.email, ...userSnap.data() };
+                checkRoleFlow();
+            } else {
+                // 신규 유저 -> 역할 선택 화면
+                showScreen('roleScreen');
+            }
         } else {
-            document.getElementById('setupScreen').classList.add('hidden');
-            document.getElementById('mainScreen').classList.remove('hidden');
-            render();
+            // 로그아웃 상태 -> 로그인 화면
+            currentUserDoc = null;
+            if(unsubscribeGoals) unsubscribeGoals();
+            showScreen('loginScreen');
+        }
+    });
+
+    // 1. 구글 로그인
+    window.signInWithGoogle = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error(error);
+            alert("로그인 실패: " + error.message);
+        }
+    };
+
+    // 2. 역할 저장 (부모 / 아이)
+    window.saveRole = async (role) => {
+        const user = auth.currentUser;
+        if(!user) return;
+        
+        await setDoc(doc(db, "users", user.uid), {
+            email: user.email,
+            role: role,
+            linkedChildren: [] // 부모일 경우 자녀 이메일 배열
+        });
+        
+        currentUserDoc = { uid: user.uid, email: user.email, role: role, linkedChildren: [] };
+        checkRoleFlow();
+    };
+
+    // 3. 롤 기반 흐름 제어
+    function checkRoleFlow() {
+        document.getElementById('userEmailLabel').innerText = currentUserDoc.email;
+        
+        if (currentUserDoc.role === 'parent') {
+            document.getElementById('userRoleBadge').innerText = "👨‍👩‍👧 부모 계정";
+            document.getElementById('addGoalSection').classList.add('hidden'); // 부모는 등록 폼 숨김
+            
+            if (!currentUserDoc.linkedChildren || currentUserDoc.linkedChildren.length === 0) {
+                showScreen('parentLinkScreen');
+            } else {
+                showScreen('mainScreen');
+                loadGoals();
+            }
+        } else if (currentUserDoc.role === 'child') {
+            document.getElementById('userRoleBadge').innerText = "🧒 아이 계정";
+            document.getElementById('addGoalSection').classList.remove('hidden'); // 아이는 등록 폼 보임
+            showScreen('mainScreen');
+            loadGoals();
         }
     }
 
-    function savePasswords() {
-        const pPw = document.getElementById('parentPwInput').value;
-        const cPw = document.getElementById('childPwInput').value;
-        if (!pPw || !cPw) return alert("모든 비밀번호를 입력해주세요!");
-        parentPassword = pPw;
-        childPassword = cPw;
-        alert("설정되었습니다.");
-        init();
-    }
+    // 4. 부모 -> 자녀 연결
+    window.linkChildren = async () => {
+        const emailsStr = document.getElementById('childEmailInput').value;
+        if (!emailsStr.trim()) return alert("이메일을 입력해주세요.");
+        
+        // 공백 제거 및 배열화
+        const emails = emailsStr.split(',').map(e => e.trim()).filter(e => e.length > 0);
+        
+        await updateDoc(doc(db, "users", currentUserDoc.uid), {
+            linkedChildren: emails
+        });
+        
+        currentUserDoc.linkedChildren = emails;
+        alert("자녀가 연결되었습니다.");
+        checkRoleFlow();
+    };
 
-    function showSetupScreen() {
-        document.getElementById('setupScreen').classList.remove('hidden');
-        document.getElementById('mainScreen').classList.add('hidden');
-    }
+    // 5. 스터디 목표 등록 (아이 전용)
+    window.addGoal = async () => {
+        if(currentUserDoc.role !== 'child') return;
 
-    function addGoal() {
         const title = document.getElementById('goalTitle').value;
         const startVal = document.getElementById('startTime').value;
         const endVal = document.getElementById('deadline').value;
@@ -148,57 +259,189 @@
         const start = new Date(startVal).getTime();
         const end = new Date(endVal).getTime();
 
-        goals.push({
-            id: Date.now(),
-            title: title,
-            desc: document.getElementById('goalDesc').value,
-            reward: document.getElementById('rewardText').value,
-            start: start,
-            end: end,
-            startStr: formatTime(new Date(startVal)),
-            endStr: formatTime(new Date(endVal)),
-            isApproved: false,
-            childDone: false,
-            rewardDone: false
-        });
+        try {
+            await addDoc(collection(db, "goals"), {
+                title: title,
+                desc: document.getElementById('goalDesc').value,
+                reward: document.getElementById('rewardText').value,
+                start: start,
+                end: end,
+                startStr: formatTime(new Date(startVal)),
+                endStr: formatTime(new Date(endVal)),
+                isApproved: false,
+                childDone: false,
+                rewardDone: false,
+                childEmail: currentUserDoc.email, // 권한/연결용
+                childUid: currentUserDoc.uid,
+                createdAt: serverTimestamp()
+            });
 
-        document.getElementById('goalTitle').value = '';
-        document.getElementById('goalDesc').value = '';
-        document.getElementById('rewardText').value = '';
-        render();
+            // 입력 폼 초기화
+            document.getElementById('goalTitle').value = '';
+            document.getElementById('goalDesc').value = '';
+            document.getElementById('rewardText').value = '';
+        } catch (e) {
+            console.error(e);
+            alert("등록 실패");
+        }
+    };
+
+    // 6. 데이터 실시간 불러오기 (리스너)
+    function loadGoals() {
+        if(unsubscribeGoals) unsubscribeGoals(); // 기존 리스너 해제
+
+        const goalsRef = collection(db, "goals");
+        let q;
+
+        if (currentUserDoc.role === 'child') {
+            // 아이는 자신의 목표만 봄
+            q = query(goalsRef, where("childUid", "==", currentUserDoc.uid));
+        } else if (currentUserDoc.role === 'parent') {
+            // 부모는 연결된 자녀의 목표를 봄
+            if (currentUserDoc.linkedChildren.length > 0) {
+                // 최대 10명까지만 in 쿼리 지원됨
+                const targetEmails = currentUserDoc.linkedChildren.slice(0, 10); 
+                q = query(goalsRef, where("childEmail", "in", targetEmails));
+            } else {
+                renderList([]); return;
+            }
+        }
+
+        unsubscribeGoals = onSnapshot(q, (snapshot) => {
+            const goals = [];
+            snapshot.forEach((doc) => {
+                goals.push({ id: doc.id, ...doc.data() });
+            });
+            // 시간순 정렬 (Client 측)
+            goals.sort((a, b) => b.start - a.start);
+            renderList(goals);
+        });
     }
 
+    // UI 렌더링 로직 (기존 스타일 유지, 버튼 권한 분리)
+    let updateTimer = null;
+    let currentGoals = [];
+
+    function renderList(goals) {
+        currentGoals = goals;
+        const listEl = document.getElementById('goalList');
+        listEl.innerHTML = '';
+
+        if(goals.length === 0) {
+            listEl.innerHTML = '<div style="text-align:center; padding:30px; color:#999;">등록된 스터디가 없습니다.</div>';
+            return;
+        }
+
+        goals.forEach(goal => {
+            const isCompleted = goal.childDone && goal.rewardDone;
+            
+            // 역할별 버튼/체크박스 제어
+            const isChild = currentUserDoc.role === 'child';
+            const isParent = currentUserDoc.role === 'parent';
+
+            // 부모만 승인 버튼 클릭 가능
+            const btnApproveHTML = !goal.isApproved 
+                ? (isParent ? `<button class="btn-approve" onclick="actionGoal('${goal.id}', 'approve')">🛡️ 목표 승인</button>` : `<span style="color: #f39c12; font-weight: bold; font-size: 0.9rem;">⏳ 부모님 승인 대기중</span>`)
+                : `<span style="color: var(--success); font-weight: bold; font-size: 0.9rem;">✅ 승인 완료</span>`;
+
+            // 아이만 체크 가능 (단, 승인된 경우에만)
+            const checkDisabled = isParent || !goal.isApproved ? 'disabled' : '';
+            const checkOnchange = isChild ? `onchange="actionGoal('${goal.id}', 'toggleDone')"` : '';
+
+            // 삭제 버튼 (아이만 자신의 글 삭제 가능하게 하거나, 둘다 가능하게. 여기선 둘다 노출)
+            const deleteBtnHTML = `<button class="btn-delete" onclick="actionGoal('${goal.id}', 'delete')">삭제</button>`;
+
+            // 보상 지급 버튼 (부모 전용)
+            let rewardBtnHTML = '';
+            if (goal.childDone) {
+                if (isParent) {
+                    rewardBtnHTML = `<button onclick="actionGoal('${goal.id}', 'reward')" class="btn-reward" ${goal.rewardDone ? 'disabled style="background: #ccc;"' : ''}>
+                                        ${goal.rewardDone ? '🎉 보상 지급완료' : '🛡️ 보상 지급 확인 (부모)'}
+                                    </button>`;
+                } else {
+                    rewardBtnHTML = goal.rewardDone ? `<div style="text-align:center; width:100%; color:var(--reward); font-weight:bold;">🎉 부모님이 보상을 지급했습니다!</div>` : `<div style="text-align:center; width:100%; color:#888;">부모님의 보상 확인을 기다리고 있어요.</div>`;
+                }
+            }
+
+            const html = `
+                <div class="goal-item ${isCompleted ? 'completed' : ''}">
+                    <div class="goal-header">
+                        <div style="flex:1">
+                            ${isParent ? `<span class="author-badge">${goal.childEmail.split('@')[0]}</span><br>` : ''}
+                            <strong style="font-size: 1rem;">${goal.title}</strong>
+                            <p style="margin:4px 0; font-size:0.85rem; color:#666;">${goal.desc || ''}</p>
+                            ${goal.reward ? `<span class="tag-reward">🎁 ${goal.reward}</span>` : ''}
+                        </div>
+                        ${deleteBtnHTML}
+                    </div>
+
+                    <div class="progress-wrapper">
+                        <div class="status-text" id="text-${goal.id}">계산 중...</div>
+                        <div class="progress-container">
+                            <div id="bar-${goal.id}" class="progress-bar"></div>
+                        </div>
+                        <div class="time-labels">
+                            <span>시작: ${goal.startStr}</span>
+                            <span>종료: ${goal.endStr}</span>
+                        </div>
+                    </div>
+
+                    <div class="footer-actions">
+                        <div class="action-row">
+                            ${btnApproveHTML}
+                            
+                            <label class="custom-check">
+                                <input type="checkbox" ${goal.childDone ? 'checked' : ''} 
+                                       ${checkDisabled} ${checkOnchange}> 
+                                🧑 완료
+                            </label>
+                        </div>
+                        ${rewardBtnHTML}
+                    </div>
+                </div>
+            `;
+            listEl.innerHTML += html;
+        });
+
+        updateProgressBars();
+        if(updateTimer) clearInterval(updateTimer);
+        updateTimer = setInterval(updateProgressBars, 30000);
+    }
+
+    // Firestore 데이터 업데이트 액션
+    window.actionGoal = async (id, actionType) => {
+        const goalRef = doc(db, "goals", id);
+        
+        if (actionType === 'delete') {
+            if(confirm("정말 삭제하시겠습니까?")) await deleteDoc(goalRef);
+        } 
+        else if (actionType === 'approve') {
+            await updateDoc(goalRef, { isApproved: true });
+        } 
+        else if (actionType === 'reward') {
+            await updateDoc(goalRef, { rewardDone: true });
+        } 
+        else if (actionType === 'toggleDone') {
+            // 현재 상태 가져오기 위한 로컬 탐색
+            const goal = currentGoals.find(g => g.id === id);
+            await updateDoc(goalRef, { childDone: !goal.childDone });
+        }
+    };
+
+    // 로그아웃
+    window.signOutApp = async () => {
+        await signOut(auth);
+    };
+
+    // 시간 포맷
     function formatTime(date) {
         return `${(date.getMonth()+1)}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
     }
 
-    function deleteGoal(id) {
-        const pw = prompt("🗑️ 아이 비밀번호를 입력하세요:");
-        if (pw === childPassword) {
-            goals = goals.filter(g => g.id !== id);
-            render();
-        } else if (pw !== null) alert("❌ 비번이 틀렸습니다.");
-    }
-
-    function parentAction(id, actionType) {
-        const pw = prompt("🛡️ 부모 비밀번호를 입력하세요:");
-        if (pw === parentPassword) {
-            const goal = goals.find(g => g.id === id);
-            if (actionType === 'approve') goal.isApproved = true;
-            if (actionType === 'reward') goal.rewardDone = true;
-            render();
-        } else if (pw !== null) alert("❌ 비번이 틀렸습니다.");
-    }
-
-    function toggleChildDone(id) {
-        const goal = goals.find(g => g.id === id);
-        goal.childDone = !goal.childDone;
-        render();
-    }
-
-    function updateProgress() {
+    // 프로그레스 바 계산
+    function updateProgressBars() {
         const now = new Date().getTime();
-        goals.forEach(goal => {
+        currentGoals.forEach(goal => {
             const el = document.getElementById(`bar-${goal.id}`);
             const textEl = document.getElementById(`text-${goal.id}`);
             if(!el) return;
@@ -224,88 +467,6 @@
         });
     }
 
-    function render() {
-        const listEl = document.getElementById('goalList');
-        listEl.innerHTML = '';
-
-        goals.forEach(goal => {
-            const isCompleted = goal.childDone && goal.rewardDone;
-            const html = `
-                <div class="goal-item ${isCompleted ? 'completed' : ''}">
-                    <div class="goal-header">
-                        <div style="flex:1">
-                            <strong style="font-size: 1rem;">${goal.title}</strong>
-                            <p style="margin:4px 0; font-size:0.85rem; color:#666;">${goal.desc}</p>
-                            ${goal.reward ? `<span class="tag-reward">🎁 ${goal.reward}</span>` : ''}
-                        </div>
-                        <button class="btn-delete" onclick="deleteGoal(${goal.id})">삭제</button>
-                    </div>
-
-                    <div class="progress-wrapper">
-                        <div class="status-text" id="text-${goal.id}">계산 중...</div>
-                        <div class="progress-container">
-                            <div id="bar-${goal.id}" class="progress-bar"></div>
-                        </div>
-                        <div class="time-labels">
-                            <span>시작: ${goal.startStr}</span>
-                            <span>종료: ${goal.endStr}</span>
-                        </div>
-                    </div>
-
-                    <div class="footer-actions">
-                        <div class="action-row">
-                            ${!goal.isApproved ? 
-                                `<button class="btn-approve" onclick="parentAction(${goal.id}, 'approve')">🛡️ 부모 승인</button>` : 
-                                `<span style="color: var(--success); font-weight: bold; font-size: 0.9rem;">✅ 승인 완료</span>`}
-                            
-                            <label class="custom-check">
-                                <input type="checkbox" ${goal.childDone ? 'checked' : ''} 
-                                       ${!goal.isApproved ? 'disabled' : ''} 
-                                       onchange="toggleChildDone(${goal.id})"> 
-                                🧑 완료
-                            </label>
-                        </div>
-                        
-                        ${goal.childDone ? 
-                            `<button onclick="parentAction(${goal.id}, 'reward')" class="btn-reward"
-                                     ${goal.rewardDone ? 'disabled style="background: #ccc;"' : ''}>
-                                ${goal.rewardDone ? '🎉 보상 지급완료' : '🛡️ 보상 지급 확인 (부모)'}
-                            </button>` : ''}
-                    </div>
-                </div>
-            `;
-            listEl.innerHTML += html;
-        });
-        updateProgress();
-    }
-
-    init();
-    setInterval(updateProgress, 30000); // 30초마다 갱신
 </script>
-
-    <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyDCZVfZUl0VTCfbHIEEriAnDhSZAXYXygA",
-    authDomain: "studyincentive.firebaseapp.com",
-    projectId: "studyincentive",
-    storageBucket: "studyincentive.firebasestorage.app",
-    messagingSenderId: "835106117130",
-    appId: "1:835106117130:web:d992c3c2266f0ffa1a31f3",
-    measurementId: "G-CYR1LSTGVS"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
-
 </body>
 </html>
